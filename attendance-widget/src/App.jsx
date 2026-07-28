@@ -17,6 +17,7 @@ function App() {
   const [timer, setTimer] = useState(null);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isCheckedOut, setIsCheckedOut] = useState(false);
+  const [employeeId, setEmployeeId] = useState("");
 
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
@@ -33,28 +34,27 @@ function App() {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
-        })
+        }),
       );
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (!window.ZOHO) return;
 
-useEffect(() => {
+    window.ZOHO.embeddedApp.on("PageLoad", function (data) {
+      console.log("Widget Loaded");
 
-  if (!window.ZOHO) return;
+      console.log(data);
 
-  window.ZOHO.embeddedApp.on("PageLoad", function (data) {
+      if (data && data.EntityId) {
+        setEmployeeId(data.EntityId);
+      }
+    });
 
-    console.log("Widget Loaded");
-
-    console.log(data);
-
-  });
-
-  window.ZOHO.embeddedApp.init();
-
-}, []);
+    window.ZOHO.embeddedApp.init();
+  }, []);
 
   // Working Hours Timer
   useEffect(() => {
@@ -66,20 +66,14 @@ useEffect(() => {
 
         const hrs = Math.floor(diff / (1000 * 60 * 60));
 
-        const mins = Math.floor(
-          (diff % (1000 * 60 * 60)) / (1000 * 60)
-        );
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-        const secs = Math.floor(
-          (diff % (1000 * 60)) / 1000
-        );
+        const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
         setWorkingHours(
           `${hrs.toString().padStart(2, "0")} Hr ${mins
             .toString()
-            .padStart(2, "0")} Min ${secs
-            .toString()
-            .padStart(2, "0")} Sec`
+            .padStart(2, "0")} Min ${secs.toString().padStart(2, "0")} Sec`,
         );
       }, 1000);
 
@@ -100,7 +94,7 @@ useEffect(() => {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-      })
+      }),
     );
 
     setStatus("Present");
@@ -124,7 +118,7 @@ useEffect(() => {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
-      })
+      }),
     );
 
     clearInterval(timer);
@@ -133,20 +127,14 @@ useEffect(() => {
 
     const hrs = Math.floor(diff / (1000 * 60 * 60));
 
-    const mins = Math.floor(
-      (diff % (1000 * 60 * 60)) / (1000 * 60)
-    );
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-    const secs = Math.floor(
-      (diff % (1000 * 60)) / 1000
-    );
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
     setWorkingHours(
       `${hrs.toString().padStart(2, "0")} Hr ${mins
         .toString()
-        .padStart(2, "0")} Min ${secs
-        .toString()
-        .padStart(2, "0")} Sec`
+        .padStart(2, "0")} Min ${secs.toString().padStart(2, "0")} Sec`,
     );
 
     setIsCheckedOut(true);
@@ -157,40 +145,29 @@ useEffect(() => {
       {/* Navbar */}
 
       <nav className="navbar">
-        <div className="logo">
-          🏢 Attendance Management
-        </div>
+        <div className="logo">🏢 Attendance Management</div>
 
         <div className="nav-right">
           <span>🔔</span>
 
-          <div className="profile">
-            {employee.name.charAt(0)}
-          </div>
+          <div className="profile">{employee.name.charAt(0)}</div>
         </div>
       </nav>
 
       {/* Main */}
 
       <div className="main">
-
         <div className="attendance-card">
-
           <div className="header">
-
-            <div className="avatar">
-              {employee.name.charAt(0)}
-            </div>
+            <div className="avatar">{employee.name.charAt(0)}</div>
 
             <div>
               <h2>{employee.name}</h2>
               <p>{employee.designation}</p>
             </div>
-
           </div>
 
           <div className="grid">
-
             <div className="box">
               <h4>Date</h4>
               <p>{today}</p>
@@ -200,21 +177,17 @@ useEffect(() => {
               <h4>Current Time</h4>
               <p>{currentTime}</p>
             </div>
-
           </div>
 
           <div
             className={`status ${
-              status === "Present"
-                ? "present"
-                : "notpresent"
+              status === "Present" ? "present" : "notpresent"
             }`}
           >
             {status}
           </div>
 
           <div className="grid">
-
             <div className="box">
               <h4>Check In</h4>
               <p>{checkInTime}</p>
@@ -224,11 +197,9 @@ useEffect(() => {
               <h4>Check Out</h4>
               <p>{checkOutTime}</p>
             </div>
-
           </div>
 
           <div className="buttons">
-
             <button
               className="checkin"
               onClick={handleCheckIn}
@@ -244,15 +215,12 @@ useEffect(() => {
             >
               🚪 Check Out
             </button>
-
           </div>
 
           <div className="summary">
-
             <h3>Today's Summary</h3>
 
             <div className="summary-grid">
-
               <div className="summary-box">
                 <h4>Status</h4>
                 <p>{status}</p>
@@ -267,18 +235,12 @@ useEffect(() => {
                 <h4>Shift</h4>
                 <p>{employee.shift}</p>
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
 
-      <footer>
-        © 2026 Attendance Management System 
-      </footer>
+      <footer>© 2026 Attendance Management System</footer>
     </>
   );
 }
