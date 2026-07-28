@@ -2,11 +2,15 @@ import { useEffect, useState } from "react";
 import "./App.css";
 
 function App() {
-  const employee = {
-    name: "Saloni Singh",
-    designation: "Software Engineer",
-    shift: "General Shift",
-  };
+
+  const [employee, setEmployee] = useState({
+    name: "",
+    designation: "",
+    department: "",
+    email: "",
+    image: "",
+    status: "",
+  });
 
   const [currentTime, setCurrentTime] = useState("");
   const [status, setStatus] = useState("Not Checked In");
@@ -18,6 +22,8 @@ function App() {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isCheckedOut, setIsCheckedOut] = useState(false);
   const [employeeId, setEmployeeId] = useState("");
+  const [attendanceId, setAttendanceId] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
@@ -41,20 +47,29 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!window.ZOHO) return;
+  if (!window.ZOHO) {
+    console.log("Zoho SDK Not Loaded");
+    return;
+  }
 
-    window.ZOHO.embeddedApp.on("PageLoad", function (data) {
-      console.log("Widget Loaded");
+  window.ZOHO.embeddedApp.on("PageLoad", function (data) {
+    console.log("Page Load", data);
 
-      console.log(data);
+    let id = data.EntityId;
 
-      if (data && data.EntityId) {
-        setEmployeeId(data.EntityId);
-      }
-    });
+    if (Array.isArray(id)) {
+      id = id[0];
+    }
 
-    window.ZOHO.embeddedApp.init();
-  }, []);
+    setEmployeeId(id);
+
+    console.log("Employee ID :", id);
+
+    getEmployeeDetails(id);
+  });
+
+  window.ZOHO.embeddedApp.init();
+}, []);
 
   // Working Hours Timer
   useEffect(() => {
@@ -84,26 +99,63 @@ function App() {
   }, [checkInDate, isCheckedIn, isCheckedOut]);
 
   // Check In
-  const handleCheckIn = () => {
-    const now = new Date();
+ const handleCheckIn = () => {
+   console.log("Check In button clicked");
+  if (!employeeId) {
+    alert("Employee ID not found.");
+    return;
+  }
 
-    setCheckInDate(now);
+  const now = new Date();
 
-    setCheckInTime(
-      now.toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }),
-    );
+  setCheckInDate(now);
 
-    setStatus("Present");
+  const checkIn = now.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
-    setIsCheckedIn(true);
+  setCheckInTime(checkIn);
+  setStatus("Present");
+  setIsCheckedIn(true);
+  setIsCheckedOut(false);
 
-    setIsCheckedOut(false);
+  const attendanceData = {
+    Name: `Attendance - ${employee.name}`,
+    Employee: {
+      id: employeeId,
+    },
+    Date: now.toISOString().split("T")[0],
+    Check_In_Time: now.toISOString(),
+    Status: "Present",
   };
 
+  console.log("Creating Attendance:", attendanceData);
+
+  window.ZOHO.CRM.API.insertRecord({
+    Entity: "Attandances",
+    APIData: attendanceData,
+  })
+    .then((response) => {
+      console.log("Attendance Created:", response);
+
+      if (
+        response.data &&
+        response.data.length > 0 &&
+        response.data[0].details
+      ) {
+        setAttendanceId(response.data[0].details.id);
+
+        alert("✅ Check In Successful");
+      }
+    })
+    .catch((error) => {
+      console.error(error);
+
+      alert("Failed to create attendance.");
+    });
+};
   // Check Out
   const handleCheckOut = () => {
     if (!checkInDate) {
@@ -140,6 +192,34 @@ function App() {
     setIsCheckedOut(true);
   };
 
+  const getEmployeeDetails = (recordId) => {
+  if (!window.ZOHO) return;
+
+  window.ZOHO.CRM.API.getRecord({
+    Entity: "Employees",
+    RecordID: recordId,
+  })
+    .then((response) => {
+      console.log("Employee Response", response);
+
+      if (response.data && response.data.length > 0) {
+        const emp = response.data[0];
+
+        setEmployee({
+          name: emp.Name || "",
+          designation: emp.Designation || "",
+          department: emp.Department || "",
+          email: emp.Email || "",
+          image: emp.Record_Image || "",
+          status: emp.Status || "",
+        });
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
+
   return (
     <>
       {/* Navbar */}
@@ -159,7 +239,22 @@ function App() {
       <div className="main">
         <div className="attendance-card">
           <div className="header">
-            <div className="avatar">{employee.name.charAt(0)}</div>
+           <div className="avatar">
+  {employee.image ? (
+    <img
+      src={employee.image}
+      alt="Employee"
+      style={{
+        width: "100%",
+        height: "100%",
+        borderRadius: "50%",
+        objectFit: "cover",
+      }}
+    />
+  ) : (
+    employee.name?.charAt(0)
+  )}
+</div>
 
             <div>
               <h2>{employee.name}</h2>
@@ -232,9 +327,9 @@ function App() {
               </div>
 
               <div className="summary-box">
-                <h4>Shift</h4>
-                <p>{employee.shift}</p>
-              </div>
+    <h4>Department</h4>
+    <p>{employee.department}</p>
+</div>
             </div>
           </div>
         </div>
@@ -244,5 +339,6 @@ function App() {
     </>
   );
 }
+
 
 export default App;
