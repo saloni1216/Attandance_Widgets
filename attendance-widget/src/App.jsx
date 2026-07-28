@@ -157,41 +157,70 @@ function App() {
     });
 };
   // Check Out
-  const handleCheckOut = () => {
-    if (!checkInDate) {
-      alert("Please Check In First");
-      return;
-    }
+const handleCheckOut = () => {
+  if (!checkInDate) {
+    alert("Please Check In First");
+    return;
+  }
 
-    const now = new Date();
+  const now = new Date();
 
-    setCheckOutTime(
-      now.toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }),
-    );
+  setCheckOutTime(
+    now.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }),
+  );
 
-    clearInterval(timer);
+  clearInterval(timer);
 
-    const diff = now - checkInDate;
+  const diff = now - checkInDate;
 
-    const hrs = Math.floor(diff / (1000 * 60 * 60));
+  const hrs = Math.floor(diff / (1000 * 60 * 60));
+  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
-    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  setWorkingHours(
+    `${hrs.toString().padStart(2, "0")} Hr ${mins
+      .toString()
+      .padStart(2, "0")} Min ${secs.toString().padStart(2, "0")} Sec`,
+  );
 
-    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+  setIsCheckedOut(true);
 
-    setWorkingHours(
-      `${hrs.toString().padStart(2, "0")} Hr ${mins
-        .toString()
-        .padStart(2, "0")} Min ${secs.toString().padStart(2, "0")} Sec`,
-    );
+  // ----------------------------
+  // Zoho CRM Update Attendance
+  // ----------------------------
 
-    setIsCheckedOut(true);
-  };
+  if (!attendanceId) {
+    alert("Attendance record not found.");
+    return;
+  }
 
+  const workingHoursDecimal = (
+    (now - checkInDate) /
+    (1000 * 60 * 60)
+  ).toFixed(2);
+
+  window.ZOHO.CRM.API.updateRecord({
+    Entity: "Attandances",
+    APIData: {
+      id: attendanceId,
+      Check_Out_Time: now.toISOString(),
+      Working_Hours: workingHoursDecimal,
+      Status: "Present",
+    },
+  })
+    .then((response) => {
+      console.log("Attendance Updated:", response);
+      alert("✅ Check Out Successful");
+    })
+    .catch((error) => {
+      console.error("Update Error:", error);
+      alert("Failed to update Attendance");
+    });
+};
   const getEmployeeDetails = (recordId) => {
   if (!window.ZOHO) return;
 
